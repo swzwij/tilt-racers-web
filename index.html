@@ -19,7 +19,7 @@
     </style>
 </head>
 <body>
-    <input type="text" id="connectionAddress" placeholder="Enter encoded IP and port">
+    <input type="text" id="connectionAddress" placeholder="Enter IP and port (e.g., 192.168.1.1:8080)">
     <button id="recalibrateButton">Recalibrate</button>
     <p id="debugText">Client started</p>
 
@@ -55,10 +55,9 @@
         }
 
         function connectToServer(connectionAddress) {
-            const { ip, port: decodedPort } = decodeAddress(connectionAddress);
-            if (ip && decodedPort) {
+            const [ip, port] = connectionAddress.split(':');
+            if (ip && port) {
                 pcIPAddress = ip;
-                port = decodedPort;
                 websocket = new WebSocket(`ws://${pcIPAddress}:${port}`);
                 websocket.onopen = () => {
                     document.getElementById('debugText').innerText = `Connected to ${pcIPAddress}:${port}`;
@@ -69,31 +68,6 @@
             } else {
                 document.getElementById('debugText').innerText = 'Invalid IP address and port';
             }
-        }
-
-        function decodeAddress(encodedString) {
-            if (encodedString.length !== 12) {
-                console.error('Invalid encoded IP and port');
-                return { ip: '', port: -1 };
-            }
-
-            let encodedIP = encodedString.substring(0, 8);
-            let decodedIP = '';
-
-            for (let i = 0; i < encodedIP.length; i += 2) {
-                let hexOctet = encodedIP.substring(i, 2);
-                let value = parseInt(hexOctet, 16);
-                decodedIP += value.toString();
-
-                if (i < 6) {
-                    decodedIP += '.';
-                }
-            }
-
-            let encodedPort = encodedString.substring(8, 12);
-            let decodedPort = parseInt(encodedPort, 16);
-
-            return { ip: decodedIP, port: decodedPort };
         }
     </script>
 </body>

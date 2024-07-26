@@ -3,17 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gyroscope Rotation</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Gyro Client</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        input, button {
+            margin: 10px;
+        }
+    </style>
 </head>
 <body>
-    <div id="gyroData">
-        <h1>Gyroscope Data</h1>
-        <p>Alpha (Rotation around Z-axis): <span id="alpha">0</span></p>
-        <p>Beta (Rotation around X-axis): <span id="beta">0</span></p>
-        <p>Gamma (Rotation around Y-axis): <span id="gamma">0</span></p>
-    </div>
+    <input type="text" id="connectionAddress" placeholder="Enter encoded IP and port">
+    <button id="recalibrateButton">Recalibrate</button>
+    <p id="debugText">Client started</p>
 
-    <script src="script.js"></script>
+    <script>
+        let pcIPAddress = null;
+        let port = null;
+        let websocket = null;
+
+        document.getElementById('connectionAddress').addEventListener('change', (event) => {
+            connectToServer(event.target.value);
+        });
+
+        document.getElementById('recalibrateButton').addEventListener('click', () => {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send('RECALIBRATE');
+                console.log('Recalibrate message sent');
+                document.getElementById('debugText').innerText = 'Recalibrate message sent';
+            }
+        });
+
+        if ('DeviceOrientationEvent' in window) {
+            window.addEventListener('deviceorientation', event => {
+                if (websocket && websocket.readyState === WebSocket.OPEN) {
+                    const { alpha, beta, gamma } = event;
+                    const message = `${alpha},${beta},${gamma}`;
+                    websocket.send(message);
+                    console.log('Gyro data sent: ' + message);
+                    document.getElementById('debugText').innerText = 'Gyro data sent: ' + message;
+                }
+            });
+        } else {
+            document.getElementById('debugText').innerText = 'Device orientation not supported';
+        }
+
+        function connectToServer(connectionAddress) {
+            const { ip, port } = decodeAddress(connectionAddress);
+            if (ip && port) {
+                pcIPAddress = ip;
+                port = port;
+                websocket = new WebSocket(`ws://${pcIPAddress}:${port}`);
+                websocket.onopen = () => {
+                    document.getElementById('debugText').innerText = `Connected to ${pcIPAddress}:${port}`;
+                };
+                websocket.onerror = (error) => {
+                    document.getElementById('debugText').innerText = `WebSocket error: ${error.message}`;
+                };
+            } else {
+                document.getElementById('debugText').innerText = 'Invalid IP address and port';
+            }
+        }
+
+        function decodeAddress(encodedString) {
+            if (encodedString.length !== 12) {
+                console.error('Invalid encoded IP and port');
+                return { ip: '', port: -1 };
+            }
+
+            let encodedIP = encodedString.substring(0, 8);
+            let decodedIP = '';
+
+            for (let i = 0; i < encodedIP.length; i += 2) {
+                let hexOctet = encodedIP.substring(i, 2);
+                let value = parseInt(hexOctet, 16);
+                decodedIP += value.toString();
+
+                if (i < 6) {
+                    decodedIP += '.';
+                }
+            }
+
+            let encodedPort = encodedString.substring(8, 12);
+            let decodedPort = parseInt(encodedPort, 16);
+
+            return { ip: decodedIP, port: decodedPort };
+        }
+    </script>
 </body>
 </html>

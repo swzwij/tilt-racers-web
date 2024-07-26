@@ -55,10 +55,10 @@
         }
 
         function connectToServer(connectionAddress) {
-            const { ip, port } = decodeAddress(connectionAddress);
-            if (ip && port) {
+            const { ip, port: decodedPort } = decodeAddress(connectionAddress);
+            if (ip && decodedPort) {
                 pcIPAddress = ip;
-                port = port;
+                port = decodedPort;
                 websocket = new WebSocket(`ws://${pcIPAddress}:${port}`);
                 websocket.onopen = () => {
                     document.getElementById('debugText').innerText = `Connected to ${pcIPAddress}:${port}`;
